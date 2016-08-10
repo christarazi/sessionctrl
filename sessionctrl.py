@@ -7,7 +7,7 @@ This tool has 2 dependencies:
 in order to interact with the X Windows.
 
 Note: 
-The developement of wmctrl seems to have halted. There are several versions 
+The development of wmctrl seems to have halted. There are several versions 
 floating around on the web, but none are from the original author.
 
 With that in mind, minimizing a window is not supported by the official version,
@@ -45,6 +45,31 @@ wm_states = {
         # "_NET_WM_STATE_ABOVE": "above",
         # "_NET_WM_STATE_BELOW": "below"
         }
+
+# Sanity check for dependencies
+with subprocess.Popen(shlex.split("which wmctrl"), stdout=subprocess.PIPE) as proc:
+    try:
+        proc.wait(timeout=5)
+    except TimeoutExpired as e:
+        print("Apparently your CPU sucks :)")
+        sys.exit(-1)
+
+    if proc.returncode != 0:
+        print(proc.returncode, "Please install wmctrl as it is a dependency.")
+        sys.exit(-1)
+
+with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as proc:
+    try:
+        proc.wait(timeout=5)
+    except TimeoutExpired as e:
+        print("Apparently your CPU sucks :)")
+        sys.exit(-1)
+
+    if proc.returncode != 0:
+        print("Please install xprop as it is a dependency.")
+        sys.exit(-1)
+
+sys.exit(0)
 
 def save_session():
     cmd = "wmctrl -lpG"
