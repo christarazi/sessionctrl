@@ -69,7 +69,7 @@ with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as pro
         print("Please install xprop as it is a dependency.")
         sys.exit(-1)
 
-sys.exit(0)
+# sys.exit(0)
 
 def save_session():
     cmd = "wmctrl -lpG"
@@ -134,7 +134,7 @@ def save_session():
                                     net_wm_states = "add,hidden"
                             else:
                                 net_wm_states = "add," + ','.join(net_wm_states)
-                            print("DEBUG:", net_wm_states)
+                            # print("DEBUG:", net_wm_states)
 
                 # Finally insert an entry into the dictionary containing 
                 # all window information for an application.
@@ -144,13 +144,13 @@ def save_session():
                     d[desktop] = [[pid, geo, net_wm_states, application, window_name]]
 
     # Write dictionary out to our config file.
-    with open(".sessionctrl.info", "w") as f:
+    with open(os.path.expanduser("~") + "/.sessionctrl.info", "w") as f:
         json.dump(d, f)
         print()
 
 def restore_session():
     d = {}
-    with open(".sessionctrl.info", "r") as f:
+    with open(os.path.expanduser("~") + "/.sessionctrl.info", "r") as f:
         d = json.load(f)
 
     for desktop in d:
@@ -179,7 +179,7 @@ def move_windows():
             unmoved_windows.append(json.dumps(m.group(6)))
 
     d = {}
-    with open(".sessionctrl.info", "r") as f:
+    with open(os.path.expanduser("~") + "/.sessionctrl.info", "r") as f:
         d = json.load(f)
 
     for desktop in d:
@@ -188,7 +188,7 @@ def move_windows():
                 if entry[4] == unmoved:
                     coords = ",".join(map(str, entry[1]))
                     print("Moving", entry[4], "to 0," + coords)
-                    print("DEBUG:", unmoved)
+                    # print("DEBUG:", unmoved)
                     subprocess.Popen(shlex.split("wmctrl -r " + unmoved + " -e 0," + coords))
                     time.sleep(1)
                     print("Moving to workspace", desktop)
