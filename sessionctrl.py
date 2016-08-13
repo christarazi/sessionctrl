@@ -1,3 +1,5 @@
+#!/usr/sbin/python3
+
 '''
 This tool allows you to save your desktop session.
 
@@ -29,8 +31,30 @@ group.add_argument('-m', action="store_true", help="only moves already open wind
 
 args = parser.parse_args()
 
-blacklist = ["Thunar", "xfce4-terminal", "android"]
-replace_apps = ["android-studio"]
+global blacklist
+global replace_apps
+
+blacklist = []
+replace_apps = []
+
+conf_file_path = os.path.expanduser("~") + "/.sessionctrl.conf"
+
+# Create config file if it does not exist.
+# Otherwise parse the config file for the blacklist and replace_apps.
+if not os.path.isfile(conf_file_path):
+    with open(conf_file_path, 'w') as f:
+        f.write("blacklist=\n")
+        f.write("replace_apps=\n")
+else:
+    with open(conf_file_path, 'r') as f:
+        for line in f.readlines():
+            if line.startswith("blacklist="):
+                blacklist = [x.strip() for x in line[line.index('=') + 1: ].split(' ')]
+            elif line.startswith("replace_apps="):
+                replace_apps = [x.strip() for x in line[line.index('=') + 1: ].split(' ')]
+
+print(blacklist)
+print(replace_apps)
 
 wm_states = {
         # "_NET_WM_STATE_MODAL": "modal",
@@ -143,7 +167,7 @@ def save_session():
                 else:
                     d[desktop] = [[pid, geo, net_wm_states, application, window_name]]
 
-    # Write dictionary out to our config file.
+    # Write dictionary out to our session file.
     with open(os.path.expanduser("~") + "/.sessionctrl.info", "w") as f:
         json.dump(d, f)
         print()
