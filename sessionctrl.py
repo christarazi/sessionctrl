@@ -53,8 +53,8 @@ else:
             elif line.startswith("replace_apps="):
                 replace_apps = [x.strip() for x in line[line.index('=') + 1: ].split(' ')]
 
-print(blacklist)
-print(replace_apps)
+# print(blacklist)
+# print(replace_apps)
 
 wm_states = {
         # "_NET_WM_STATE_MODAL": "modal",
