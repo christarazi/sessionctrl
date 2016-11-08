@@ -20,7 +20,8 @@ actually be minimized when restoring a session.
 See here: <https://bugs.launchpad.net/ubuntu/+source/wmctrl/+bug/260875>
 '''
 
-import os, re, sys, subprocess, shlex, json, time, argparse
+import os, re, sys, subprocess, shlex
+import json, time, argparse, base64
 from pprint import pprint
 
 parser = argparse.ArgumentParser()
@@ -38,6 +39,7 @@ blacklist = []
 replace_apps = []
 
 conf_file_path = os.path.expanduser("~") + "/.sessionctrl.conf"
+session_file_path = os.path.expanduser("~") + "/.sessionctrl.info"
 
 # Create config file if it does not exist.
 # Otherwise parse the config file for the blacklist and replace_apps.
@@ -75,7 +77,7 @@ with subprocess.Popen(shlex.split("which wmctrl"), stdout=subprocess.PIPE) as pr
     try:
         proc.wait(timeout=5)
     except TimeoutExpired as e:
-        print("Apparently your CPU sucks :)")
+        print("Timeout expired checking for wmctrl")
         sys.exit(-1)
 
     if proc.returncode != 0:
@@ -86,7 +88,7 @@ with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as pro
     try:
         proc.wait(timeout=5)
     except TimeoutExpired as e:
-        print("Apparently your CPU sucks :)")
+        print("Timeout expired checking for xprop")
         sys.exit(-1)
 
     if proc.returncode != 0:
@@ -112,11 +114,20 @@ def save_session():
             geo = (int(m.group(4)), int(m.group(5)), int(m.group(6)), int(m.group(7)))
 
             # Get command of the application.
-            application = subprocess.Popen(shlex.split("cat /proc/" + str(pid) + "/cmdline"), stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].replace("\u0000", "")
+            application = subprocess.Popen(
+                    shlex.split("strings /proc/" + str(pid) + "/cmdline"), 
+                    stdout=subprocess.PIPE, universal_newlines=True) \
+            .communicate()[0] \
+            .replace("\u0000", "") \
+            .replace('\n', ' ') \
+            .strip() 
 
-            # json.dumps automatically escapes quotation marks in string.
-            # Need to make window_name has escaped quotation marks.
-            window_name = json.dumps(m.group(8))
+            # Encode window name into base64 and store the ASCII of the 
+            # base64 string into JSON because it expects strings,
+            # not binary data.
+            window_name = json.dumps(
+                    base64.urlsafe_b64encode(bytes(m.group(8), "utf-8")) \
+                    .decode('ascii'))
 
             # Skip over desktop-specific windows.
             if desktop == "-1":
@@ -168,13 +179,13 @@ def save_session():
                     d[desktop] = [[pid, geo, net_wm_states, application, window_name]]
 
     # Write dictionary out to our session file.
-    with open(os.path.expanduser("~") + "/.sessionctrl.info", "w") as f:
+    with open(session_file_path, "w") as f:
         json.dump(d, f)
         print()
 
 def restore_session():
     d = {}
-    with open(os.path.expanduser("~") + "/.sessionctrl.info", "r") as f:
+    with open(session_file_path, "r") as f:
         d = json.load(f)
 
     for desktop in d:
@@ -183,9 +194,13 @@ def restore_session():
             print("Launching", entry[3], "...")
             subprocess.Popen(shlex.split(entry[3]))
             time.sleep(1)
+            
             print("Moving", entry[3], "to 0," + coords)
-            subprocess.Popen(shlex.split("wmctrl -r '" + entry[4] + "' -e 0," + coords))
+            # Decode base64 string representing the window name.
+            decoded_win = base64.urlsafe_b64decode(entry[4]).decode("utf-8", "ignore")
+            subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
             time.sleep(1)
+            
             print("Moving to workspace", desktop)
             subprocess.Popen(shlex.split("wmctrl -r :ACTIVE: -t " + desktop))
             print()
@@ -200,26 +215,28 @@ def move_windows():
     for line in output.split('\n'):
         m = re.search("^[^\s]+[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)", line)
         if m and m.group(1) != "-1":
-            unmoved_windows.append(json.dumps(m.group(6)))
+            encoded = base64.urlsafe_b64encode(bytes(m.group(6), "utf-8")) \
+                    .decode('ascii')
+            unmoved_windows.append(json.dumps(encoded))
 
     d = {}
-    with open(os.path.expanduser("~") + "/.sessionctrl.info", "r") as f:
+    with open(session_file_path, "r") as f:
         d = json.load(f)
 
     for desktop in d:
         for entry in d[desktop]:
-            for unmoved in unmoved_windows:
-                if entry[4] == unmoved:
-                    coords = ",".join(map(str, entry[1]))
-                    print("Moving", entry[4], "to 0," + coords)
-                    # print("DEBUG:", unmoved)
-                    subprocess.Popen(shlex.split("wmctrl -r " + unmoved + " -e 0," + coords))
-                    time.sleep(1)
-                    print("Moving to workspace", desktop)
-                    subprocess.Popen(shlex.split("wmctrl -r " + unmoved + " -t " + desktop))
-                    print("Modifiying properties of", unmoved, " with", entry[2])
-                    subprocess.Popen(shlex.split("wmctrl -r " + unmoved + " -b " + entry[2]))
-                    print()
+            if entry[4] in unmoved_windows:
+                coords = ",".join(map(str, entry[1]))
+                decoded_win = base64.urlsafe_b64decode(entry[4]).decode("utf-8", "ignore")
+                print("Moving", decoded_win, "to 0," + coords)
+                # print("DEBUG:", decoded_win)
+                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
+                time.sleep(1)
+                print("Moving to workspace", desktop)
+                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -t " + desktop))
+                print("Modifiying properties of", decoded_win, " with", entry[2])
+                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -b " + entry[2]))
+                print()
 
 
 if args.r:
