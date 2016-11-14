@@ -112,6 +112,10 @@ def save_session():
             desktop = m.group(2)
             pid = int(m.group(3))
             geo = (int(m.group(4)), int(m.group(5)), int(m.group(6)), int(m.group(7)))
+            
+            # If pid is 0 then the applicaiton does not support windows.
+            if pid == 0:
+                continue
 
             # Get command of the application.
             application = subprocess.Popen(
@@ -181,7 +185,7 @@ def save_session():
     # Write dictionary out to our session file.
     with open(session_file_path, "w") as f:
         json.dump(d, f)
-        print()
+        print("Session saved.")
 
 def restore_session():
     d = {}
