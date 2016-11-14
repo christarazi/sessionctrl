@@ -228,18 +228,18 @@ def move_windows():
         d = json.load(f)
 
     for desktop in d:
-        for entry in d[desktop]:
-            if entry[4] in unmoved_windows:
-                coords = ",".join(map(str, entry[1]))
-                decoded_win = base64.urlsafe_b64decode(entry[4]).decode("utf-8", "ignore")
+        for window in d[desktop]:
+            if window[4] in unmoved_windows:
+                coords = ",".join(map(str, window[1]))
+                decoded_win = base64.urlsafe_b64decode(window[4]).decode("utf-8", "ignore")
                 print("Moving", decoded_win, "to 0," + coords)
                 # print("DEBUG:", decoded_win)
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
                 time.sleep(1)
                 print("Moving to workspace", desktop)
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -t " + desktop))
-                print("Modifiying properties of", decoded_win, " with", entry[2])
-                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -b " + entry[2]))
+                print("Modifiying properties of", decoded_win, " with", window[2])
+                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -b " + window[2]))
                 print()
 
 
