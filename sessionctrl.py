@@ -121,10 +121,10 @@ def save_session():
             application = subprocess.Popen(
                     shlex.split("strings /proc/" + str(pid) + "/cmdline"), 
                     stdout=subprocess.PIPE, universal_newlines=True) \
-            .communicate()[0] \
-            .replace("\u0000", "") \
-            .replace('\n', ' ') \
-            .strip() 
+                    .communicate()[0] \
+                    .replace("\u0000", "") \
+                    .replace('\n', ' ') \
+                    .strip() 
 
             # Encode window name into base64 and store the ASCII of the 
             # base64 string into JSON because it expects strings,
@@ -147,12 +147,21 @@ def save_session():
             # rather under some strange name like 'sun-awt-X11-XFramePeer'.
             for apps in replace_apps:
                 if apps in application:
-                    application = subprocess.Popen(shlex.split("which " + apps), stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].replace("\u0000", "").strip()
+                    application = subprocess.Popen( \
+                            shlex.split("which " + apps), 
+                            stdout=subprocess.PIPE, universal_newlines=True) \
+                            .communicate()[0] \
+                            .replace("\u0000", "") \
+                            .strip()
         
             if not blacklisted:
 
                 # Get _NET_WM_STATE properties of the window, using xprop.
-                xprop = subprocess.Popen(shlex.split("xprop -id " + _wid), stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].replace("\u0000", "")
+                xprop = subprocess.Popen( \
+                        shlex.split("xprop -id " + _wid), \
+                        stdout=subprocess.PIPE, universal_newlines=True) \
+                        .communicate()[0] \
+                        .replace("\u0000", "")
                 
                 # Populate list of states and convert them to something wmctrl understands.
                 net_wm_states = []
@@ -199,7 +208,7 @@ def restore_session():
             subprocess.Popen(shlex.split(entry[3]))
             time.sleep(1)
             
-            print("Moving", entry[3], "to 0," + coords)
+            print("Moving to 0," + coords)
             # Decode base64 string representing the window name.
             decoded_win = base64.urlsafe_b64decode(entry[4]).decode("utf-8", "ignore")
             subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
@@ -232,13 +241,13 @@ def move_windows():
             if window[4] in unmoved_windows:
                 coords = ",".join(map(str, window[1]))
                 decoded_win = base64.urlsafe_b64decode(window[4]).decode("utf-8", "ignore")
-                print("Moving", decoded_win, "to 0," + coords)
-                # print("DEBUG:", decoded_win)
+                print(decoded_win)
+                print("Moving to 0," + coords)
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
                 time.sleep(1)
                 print("Moving to workspace", desktop)
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -t " + desktop))
-                print("Modifiying properties of", decoded_win, " with", window[2])
+                print("Modifiying properties to", window[2])
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -b " + window[2]))
                 print()
 
