@@ -8,8 +8,8 @@ This tool has 2 dependencies:
     2) xprop  <https://www.x.org/archive/X11R6.7.0/doc/xprop.1.html>
 in order to interact with the X Windows.
 
-Note: 
-The development of wmctrl seems to have halted. There are several versions 
+Note:
+The development of wmctrl seems to have halted. There are several versions
 floating around on the web, but none are from the original author.
 
 With that in mind, minimizing a window is not supported by the official version,
@@ -101,7 +101,7 @@ def save_session():
     cmd = "wmctrl -lpG"
     p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, universal_newlines=True)
     output = p.communicate()[0].replace("\u0000", "")
-    
+
     d = {}
     for line in output.split('\n'):
         blacklisted = False
@@ -112,21 +112,21 @@ def save_session():
             desktop = m.group(2)
             pid = int(m.group(3))
             geo = (int(m.group(4)), int(m.group(5)), int(m.group(6)), int(m.group(7)))
-            
+
             # If pid is 0 then the applicaiton does not support windows.
             if pid == 0:
                 continue
 
             # Get command of the application.
             application = subprocess.Popen(
-                    shlex.split("strings /proc/" + str(pid) + "/cmdline"), 
+                    shlex.split("strings /proc/" + str(pid) + "/cmdline"),
                     stdout=subprocess.PIPE, universal_newlines=True) \
                     .communicate()[0] \
                     .replace("\u0000", "") \
                     .replace('\n', ' ') \
-                    .strip() 
+                    .strip()
 
-            # Encode window name into base64 and store the ASCII of the 
+            # Encode window name into base64 and store the ASCII of the
             # base64 string into JSON because it expects strings,
             # not binary data.
             window_name = json.dumps(
@@ -148,12 +148,12 @@ def save_session():
             for apps in replace_apps:
                 if apps in application:
                     application = subprocess.Popen( \
-                            shlex.split("which " + apps), 
+                            shlex.split("which " + apps),
                             stdout=subprocess.PIPE, universal_newlines=True) \
                             .communicate()[0] \
                             .replace("\u0000", "") \
                             .strip()
-        
+
             if not blacklisted:
 
                 # Get _NET_WM_STATE properties of the window, using xprop.
@@ -162,7 +162,7 @@ def save_session():
                         stdout=subprocess.PIPE, universal_newlines=True) \
                         .communicate()[0] \
                         .replace("\u0000", "")
-                
+
                 # Populate list of states and convert them to something wmctrl understands.
                 net_wm_states = []
                 for prop in xprop.split('\n'):
@@ -184,7 +184,7 @@ def save_session():
                                 net_wm_states = "add," + ','.join(net_wm_states)
                             # print("DEBUG:", net_wm_states)
 
-                # Finally insert an entry into the dictionary containing 
+                # Finally insert an entry into the dictionary containing
                 # all window information for an application.
                 if desktop in d:
                     d[desktop].append([pid, geo, net_wm_states, application, window_name])
@@ -207,13 +207,13 @@ def restore_session():
             print("Launching", entry[3], "...")
             subprocess.Popen(shlex.split(entry[3]))
             time.sleep(1)
-            
+
             print("Moving to 0," + coords)
             # Decode base64 string representing the window name.
             decoded_win = base64.urlsafe_b64decode(entry[4]).decode("utf-8", "ignore")
             subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
             time.sleep(1)
-            
+
             print("Moving to workspace", desktop)
             subprocess.Popen(shlex.split("wmctrl -r :ACTIVE: -t " + desktop))
             print()
