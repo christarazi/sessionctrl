@@ -99,6 +99,10 @@ with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as pro
 
 def save_session():
     cmd = "wmctrl -lpG"
+    re_str = (
+            "^([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)"
+            "[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)"
+    )
     p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, universal_newlines=True)
     output = p.communicate()[0].replace("\u0000", "")
 
@@ -106,7 +110,7 @@ def save_session():
     for line in output.split('\n'):
         blacklisted = False
 
-        m = re.search("^([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)", line)
+        m = re.search(re_str, line)
         if m:
             _wid = m.group(1)
             desktop = m.group(2)
@@ -220,13 +224,17 @@ def restore_session():
 
 def move_windows():
     cmd = "wmctrl -lG"
+    re_str = (
+            "^[^\s]+[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)"
+            "[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)"
+    )
     p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, universal_newlines=True)
     output = p.communicate()[0].replace("\u0000", "")
 
     # Get list of open windows.
     unmoved_windows = []
     for line in output.split('\n'):
-        m = re.search("^[^\s]+[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)", line)
+        m = re.search(re_str, line)
         if m and m.group(1) != "-1":
             encoded = base64.urlsafe_b64encode(bytes(m.group(6), "utf-8")) \
                     .decode('ascii')
