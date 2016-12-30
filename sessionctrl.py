@@ -113,12 +113,12 @@ def save_session():
             pid = int(m.group(3))
             geo = (int(m.group(4)), int(m.group(5)), int(m.group(6)), int(m.group(7)))
 
-            # If pid is 0 then the applicaiton does not support windows.
+            # If pid is 0 then the application does not support windows.
             if pid == 0:
                 continue
 
             # Get command of the application.
-            application = subprocess.Popen(
+            exec_path = subprocess.Popen(
                     shlex.split("strings /proc/" + str(pid) + "/cmdline"),
                     stdout=subprocess.PIPE, universal_newlines=True) \
                     .communicate()[0] \
@@ -138,7 +138,7 @@ def save_session():
                 continue
 
             for item in blacklist:
-                if item in application:
+                if item in exec_path:
                     blacklisted = True
                     break
 
@@ -146,8 +146,8 @@ def save_session():
             # Some applications such as 'Android Studio' do not show up as themselves,
             # rather under some strange name like 'sun-awt-X11-XFramePeer'.
             for apps in replace_apps:
-                if apps in application:
-                    application = subprocess.Popen( \
+                if apps in exec_path:
+                    exec_path = subprocess.Popen( \
                             shlex.split("which " + apps),
                             stdout=subprocess.PIPE, universal_newlines=True) \
                             .communicate()[0] \
@@ -187,9 +187,9 @@ def save_session():
                 # Finally insert an entry into the dictionary containing
                 # all window information for an application.
                 if desktop in d:
-                    d[desktop].append([pid, geo, net_wm_states, application, window_name])
+                    d[desktop].append([pid, geo, net_wm_states, exec_path, window_name])
                 else:
-                    d[desktop] = [[pid, geo, net_wm_states, application, window_name]]
+                    d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
 
     # Write dictionary out to our session file.
     with open(session_file_path, "w") as f:
@@ -247,7 +247,7 @@ def move_windows():
                 time.sleep(1)
                 print("Moving to workspace", desktop)
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -t " + desktop))
-                print("Modifiying properties to", window[2])
+                print("Modifying properties to", window[2])
                 subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -b " + window[2]))
                 print()
 
