@@ -125,17 +125,17 @@ def save_session():
             exec_path = subprocess.Popen(
                     shlex.split("strings /proc/" + str(pid) + "/cmdline"),
                     stdout=subprocess.PIPE, universal_newlines=True) \
-                    .communicate()[0] \
-                    .replace("\u0000", "") \
-                    .replace('\n', ' ') \
-                    .strip()
+                            .communicate()[0] \
+                            .replace("\u0000", "") \
+                            .replace('\n', ' ') \
+                            .strip()
 
             # Encode window name into base64 and store the ASCII of the
             # base64 string into JSON because it expects strings,
             # not binary data.
             window_name = json.dumps(
                     base64.urlsafe_b64encode(bytes(m.group(8), "utf-8")) \
-                    .decode('ascii'))
+                            .decode('ascii'))
 
             # Skip over desktop-specific windows.
             if desktop == "-1":
@@ -154,9 +154,9 @@ def save_session():
                     exec_path = subprocess.Popen( \
                             shlex.split("which " + apps),
                             stdout=subprocess.PIPE, universal_newlines=True) \
-                            .communicate()[0] \
-                            .replace("\u0000", "") \
-                            .strip()
+                                    .communicate()[0] \
+                                    .replace("\u0000", "") \
+                                    .strip()
 
             if not blacklisted:
 
@@ -164,8 +164,8 @@ def save_session():
                 xprop = subprocess.Popen( \
                         shlex.split("xprop -id " + _wid), \
                         stdout=subprocess.PIPE, universal_newlines=True) \
-                        .communicate()[0] \
-                        .replace("\u0000", "")
+                            .communicate()[0] \
+                            .replace("\u0000", "")
 
                 # Populate list of states and convert them to something wmctrl understands.
                 net_wm_states = []
