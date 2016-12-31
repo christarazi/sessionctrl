@@ -201,6 +201,7 @@ def save_session():
         print("Session saved.")
 
 def restore_session():
+    # TODO: Only launch windows that are not already open.
     d = {}
     with open(session_file_path, "r") as f:
         d = json.load(f)
