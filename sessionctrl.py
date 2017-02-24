@@ -235,13 +235,12 @@ def move_windows():
             "^[^\s]+[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)"
             "[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)"
     )
-    p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, universal_newlines=True)
-    output = p.communicate()[0].replace("\u0000", "")
 
     # Get list of open windows.
     unmoved_windows = []
-    for line in output.split('\n'):
-        m = re.search(re_str, line)
+    windows = _get_open_windows(cmd, re_str)
+    for window in windows:
+        m = re.search(re_str, window)
         if m and m.group(1) != "-1":
             encoded = base64.urlsafe_b64encode(bytes(m.group(6), "utf-8")) \
                     .decode('ascii')
