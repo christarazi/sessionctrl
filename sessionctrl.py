@@ -97,20 +97,26 @@ with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as pro
 
 # sys.exit(0)
 
+def _get_open_windows(cmd, re_str):
+    p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, universal_newlines=True)
+    l = p.communicate()[0].replace("\u0000", "").split('\n')
+
+    return l
+
+
 def save_session():
     cmd = "wmctrl -lpG"
     re_str = (
             "^([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)"
             "[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)"
     )
-    p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, universal_newlines=True)
-    output = p.communicate()[0].replace("\u0000", "")
 
     d = {}
-    for line in output.split('\n'):
+    windows = _get_open_windows(cmd, re_str)
+    for window in windows:
         blacklisted = False
 
-        m = re.search(re_str, line)
+        m = re.search(re_str, window)
         if m:
             _wid = m.group(1)
             desktop = m.group(2)
