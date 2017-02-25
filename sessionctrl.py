@@ -294,6 +294,6 @@ elif args.s:
 elif args.m:
     move_windows()
 else:
-    print("You've managed to trick ArgumentParser, congrats...")
+    parser.print_help()
     sys.exit(-1)
 
