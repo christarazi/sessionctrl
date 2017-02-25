@@ -137,8 +137,8 @@ def _get_exec_path(pid):
 def save_session():
     cmd = "wmctrl -lpG"
     re_str = (
-        "^([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)"
-        "[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)")
+        "^([x0-9a-f]+)\\s+(-?[0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+"
+        "([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+[^\\s]+[\\s]+(.+$)")
 
     d = {}
     windows = _get_open_windows(cmd, re_str)
@@ -157,8 +157,17 @@ def save_session():
             if pid == 0:
                 continue
 
+            # Skip over desktop-specific windows.
+            if desktop == "-1":
+                continue
+
             # Get command of the application.
             exec_path = _get_exec_path(pid)
+
+            for item in blacklist:
+                if item in exec_path:
+                    blacklisted = True
+                    break
 
             # Encode window name into base64 and store the ASCII of the
             # base64 string into JSON because it expects strings,
@@ -166,15 +175,6 @@ def save_session():
             window_name = json.dumps(
                 base64.urlsafe_b64encode(bytes(m.group(8), "utf-8"))
                 .decode('ascii'))
-
-            # Skip over desktop-specific windows.
-            if desktop == "-1":
-                continue
-
-            for item in blacklist:
-                if item in exec_path:
-                    blacklisted = True
-                    break
 
             # Substitute applications from predetermined list.
             # Some applications such as 'Android Studio' do not show up as themselves,
@@ -287,9 +287,8 @@ def restore_session():
 def move_windows():
     cmd = "wmctrl -lG"
     re_str = (
-        "^[^\s]+[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)[\s]+([^\s]+)"
-        "[\s]+([^\s]+)[\s]+[^\s]+[\s]+([\x20-\x7E]+)"
-    )
+        "^[x0-9a-f]+\s+(-?[0-9]+)\s+[0-9]+\s+[0-9]+"
+        "\s+[0-9]+\s+[0-9]+\s+[^\s]+[\s]+(.+$)")
 
     # Get list of open windows.
     unmoved_windows = []
@@ -297,7 +296,7 @@ def move_windows():
     for window in windows:
         m = re.search(re_str, window)
         if m and m.group(1) != "-1":
-            encoded = base64.urlsafe_b64encode(bytes(m.group(6), "utf-8")) \
+            encoded = base64.urlsafe_b64encode(bytes(m.group(2), "utf-8")) \
                 .decode('ascii')
             unmoved_windows.append(json.dumps(encoded))
 
