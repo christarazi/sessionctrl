@@ -119,9 +119,8 @@ def _get_open_windows(cmd, re_str):
         shlex.split(cmd),
         stdout=subprocess.PIPE,
         universal_newlines=True)
-    l = p.communicate()[0].replace("\u0000", "").split('\n')
 
-    return l
+    return p.communicate()[0].replace("\u0000", "").split('\n')
 
 
 def _get_exec_path(pid):
