@@ -103,6 +103,14 @@ def _get_open_windows(cmd, re_str):
 
     return l
 
+def _get_exec_path(pid):
+    return subprocess.Popen(
+            shlex.split("strings /proc/" + str(pid) + "/cmdline"),
+            stdout=subprocess.PIPE, universal_newlines=True) \
+                    .communicate()[0] \
+                    .replace("\u0000", "") \
+                    .replace('\n', ' ') \
+                    .strip()
 
 def save_session():
     cmd = "wmctrl -lpG"
@@ -128,13 +136,7 @@ def save_session():
                 continue
 
             # Get command of the application.
-            exec_path = subprocess.Popen(
-                    shlex.split("strings /proc/" + str(pid) + "/cmdline"),
-                    stdout=subprocess.PIPE, universal_newlines=True) \
-                            .communicate()[0] \
-                            .replace("\u0000", "") \
-                            .replace('\n', ' ') \
-                            .strip()
+            exec_path = _get_exec_path(pid)
 
             # Encode window name into base64 and store the ASCII of the
             # base64 string into JSON because it expects strings,
