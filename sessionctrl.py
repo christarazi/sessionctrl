@@ -38,8 +38,8 @@ global replace_apps
 blacklist = []
 replace_apps = []
 
-conf_file_path = os.path.expanduser("~") + "/.sessionctrl.conf"
-session_file_path = os.path.expanduser("~") + "/.sessionctrl.info"
+conf_file_path    = "{}/.sessionctrl.conf".format(os.path.expanduser("~"))
+session_file_path = "{}/.sessionctrl.info".format(os.path.expanduser("~"))
 
 # Create config file if it does not exist.
 # Otherwise parse the config file for the blacklist and replace_apps.
@@ -105,7 +105,7 @@ def _get_open_windows(cmd, re_str):
 
 def _get_exec_path(pid):
     return subprocess.Popen(
-            shlex.split("strings /proc/" + str(pid) + "/cmdline"),
+            shlex.split("strings /proc/{}/cmdline".format(pid)),
             stdout=subprocess.PIPE, universal_newlines=True) \
                     .communicate()[0] \
                     .replace("\u0000", "") \
@@ -160,7 +160,7 @@ def save_session():
             for apps in replace_apps:
                 if apps in exec_path:
                     exec_path = subprocess.Popen( \
-                            shlex.split("which " + apps),
+                            shlex.split("which {}".format(apps)),
                             stdout=subprocess.PIPE, universal_newlines=True) \
                                     .communicate()[0] \
                                     .replace("\u0000", "") \
@@ -170,7 +170,7 @@ def save_session():
 
                 # Get _NET_WM_STATE properties of the window, using xprop.
                 xprop = subprocess.Popen( \
-                        shlex.split("xprop -id " + _wid), \
+                        shlex.split("xprop -id {}".format(_wid)), \
                         stdout=subprocess.PIPE, universal_newlines=True) \
                             .communicate()[0] \
                             .replace("\u0000", "")
@@ -236,18 +236,18 @@ def restore_session():
                 continue
 
             coords = ",".join(map(str, entry[1]))
-            print("Launching", entry[3], "...")
+            print("Launching {} ...".format(entry[3]))
             subprocess.Popen(shlex.split(entry[3]))
             time.sleep(1)
 
-            print("Moving to 0," + coords)
+            print("Moving to 0,{}".format(coords))
             # Decode base64 string representing the window name.
             decoded_win = base64.urlsafe_b64decode(entry[4]).decode("utf-8", "ignore")
-            subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
+            subprocess.Popen(shlex.split("wmctrl -r \"{0}\" -e 0,{1}".format(decoded_win, coords)))
             time.sleep(1)
 
-            print("Moving to workspace", desktop)
-            subprocess.Popen(shlex.split("wmctrl -r :ACTIVE: -t " + desktop))
+            print("Moving to workspace {}".format(desktop))
+            subprocess.Popen(shlex.split("wmctrl -r :ACTIVE: -t {}".format(desktop)))
             print()
 
 def move_windows():
@@ -277,13 +277,13 @@ def move_windows():
                 coords = ",".join(map(str, window[1]))
                 decoded_win = base64.urlsafe_b64decode(window[4]).decode("utf-8", "ignore")
                 print(decoded_win)
-                print("Moving to 0," + coords)
-                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -e 0," + coords))
+                print("Moving to 0,{}".format(coords))
+                subprocess.Popen(shlex.split("wmctrl -r \"{0}\" -e 0,{1}".format(decoded_win, coords)))
                 time.sleep(1)
-                print("Moving to workspace", desktop)
-                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -t " + desktop))
-                print("Modifying properties to", window[2])
-                subprocess.Popen(shlex.split("wmctrl -r \"" + decoded_win + "\" -b " + window[2]))
+                print("Moving to workspace {}".format(desktop))
+                subprocess.Popen(shlex.split("wmctrl -r \"{0}\" -t {1}".format(decoded_win, desktop)))
+                print("Modifying properties to {}".format(window[2]))
+                subprocess.Popen(shlex.split("wmctrl -r \"{0}\" -b {1}".format(decoded_win, window[2])))
                 print()
 
 
