@@ -209,13 +209,32 @@ def save_session():
         print("Session saved.")
 
 def restore_session():
-    # TODO: Only launch windows that are not already open.
+    cmd = "wmctrl -lp"
+    re_str = "^[^\\s]+[\\s]+[-0-9]+[\\s]+(\\d+)"
+
+    open_windows = {}
+    windows = _get_open_windows(cmd, re_str)
+    for window in windows:
+        m = re.search(re_str, window)
+        if not m:
+            continue
+        pid = int(m.group(1))
+        if pid >= 2:
+            ep = _get_exec_path(pid)
+            open_windows[ep] = open_windows.get(ep, 0) + 1
+
     d = {}
     with open(session_file_path, "r") as f:
         d = json.load(f)
 
     for desktop in d:
         for entry in d[desktop]:
+            if (entry[3] in open_windows and
+                open_windows[entry[3]] > 0):
+                # print("[DEBUG]", "skipping", entry[3], open_windows[entry[3]])
+                open_windows[entry[3]] -= 1
+                continue
+
             coords = ",".join(map(str, entry[1]))
             print("Launching", entry[3], "...")
             subprocess.Popen(shlex.split(entry[3]))
