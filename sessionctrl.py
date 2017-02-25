@@ -114,7 +114,7 @@ with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as pro
 # sys.exit(0)
 
 
-def _get_open_windows(cmd, re_str):
+def _get_open_windows(cmd):
     p = subprocess.Popen(
         shlex.split(cmd),
         stdout=subprocess.PIPE,
@@ -140,7 +140,7 @@ def save_session():
         "([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+[^\\s]+[\\s]+(.+$)")
 
     d = {}
-    windows = _get_open_windows(cmd, re_str)
+    windows = _get_open_windows(cmd)
     for window in windows:
         blacklisted = False
 
@@ -241,7 +241,7 @@ def restore_session():
     re_str = "^[^\\s]+[\\s]+[-0-9]+[\\s]+(\\d+)"
 
     open_windows = {}
-    windows = _get_open_windows(cmd, re_str)
+    windows = _get_open_windows(cmd)
     for window in windows:
         m = re.search(re_str, window)
         if not m:
@@ -291,7 +291,7 @@ def move_windows():
 
     # Get list of open windows.
     unmoved_windows = []
-    windows = _get_open_windows(cmd, re_str)
+    windows = _get_open_windows(cmd)
     for window in windows:
         m = re.search(re_str, window)
         if m and m.group(1) != "-1":
