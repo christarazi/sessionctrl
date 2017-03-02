@@ -1,5 +1,11 @@
 # sessionctrl
-A Python script to manage your X session - save, restore, &amp; move windows.
+A Python script to manage your X session - save, restore, &amp; move windows for Linux
+based systems.
+
+This script is useful when you want to preserve your desktop's session across reboots.
+It will save every application's position (including which workspace it's in) that is
+open, allowing you to not worry about where you left off, which windows you had open,
+which workspace they were in, etc.
 
 ## Setup
 
