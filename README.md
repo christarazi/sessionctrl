@@ -31,7 +31,8 @@ $ ./sessionctrl.py -m       # Moves currently opened windows. Does not open new 
 The session is saved in `$HOME/.sessionctrl.info`.
 
 There is a config file `$HOME/.sessionctrl.conf` which is created on the first
-run. The two options are:
+run. Entries into the config file are separated by a space. The two options
+are:
 
  - `blacklist`    - do not save any applications under this list
  - `replace_apps` - substitute applications for another
