@@ -23,13 +23,13 @@ See here: <https://bugs.launchpad.net/ubuntu/+source/wmctrl/+bug/260875>
 import os
 import re
 import sys
-import subprocess
 import shlex
 import json
 import time
 import argparse
 import base64
 from pprint import pprint
+from subprocess import Popen, PIPE
 
 parser = argparse.ArgumentParser()
 group = parser.add_mutually_exclusive_group()
@@ -89,7 +89,7 @@ wm_states = {
 }
 
 # Sanity check for dependencies
-with subprocess.Popen(shlex.split("which wmctrl"), stdout=subprocess.PIPE) as proc:
+with Popen(shlex.split("which wmctrl"), stdout=PIPE) as proc:
     try:
         proc.wait(timeout=5)
     except TimeoutExpired as e:
@@ -100,7 +100,7 @@ with subprocess.Popen(shlex.split("which wmctrl"), stdout=subprocess.PIPE) as pr
         print(proc.returncode, "Please install wmctrl as it is a dependency.")
         sys.exit(-1)
 
-with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as proc:
+with Popen(shlex.split("which xprop"), stdout=PIPE) as proc:
     try:
         proc.wait(timeout=5)
     except TimeoutExpired as e:
@@ -115,18 +115,18 @@ with subprocess.Popen(shlex.split("which xprop"), stdout=subprocess.PIPE) as pro
 
 
 def _get_open_windows(cmd):
-    p = subprocess.Popen(
+    p = Popen(
         shlex.split(cmd),
-        stdout=subprocess.PIPE,
+        stdout=PIPE,
         universal_newlines=True)
 
     return p.communicate()[0].replace("\u0000", "").split('\n')
 
 
 def _get_exec_path(pid):
-    return subprocess.Popen(
+    return Popen(
         shlex.split("strings /proc/{}/cmdline".format(pid)),
-        stdout=subprocess.PIPE, universal_newlines=True) \
+        stdout=PIPE, universal_newlines=True) \
         .communicate()[0] \
         .replace("\u0000", "") \
         .replace('\n', ' ') \
@@ -180,9 +180,9 @@ def save_session():
             # rather under some strange name like 'sun-awt-X11-XFramePeer'.
             for apps in replace_apps:
                 if apps in exec_path:
-                    exec_path = subprocess.Popen(
+                    exec_path = Popen(
                         shlex.split("which {}".format(apps)),
-                        stdout=subprocess.PIPE, universal_newlines=True) \
+                        stdout=PIPE, universal_newlines=True) \
                         .communicate()[0] \
                         .replace("\u0000", "") \
                         .strip()
@@ -190,9 +190,9 @@ def save_session():
             if not blacklisted:
 
                 # Get _NET_WM_STATE properties of the window, using xprop.
-                xprop = subprocess.Popen(
+                xprop = Popen(
                     shlex.split("xprop -id {}".format(_wid)),
-                    stdout=subprocess.PIPE, universal_newlines=True) \
+                    stdout=PIPE, universal_newlines=True) \
                     .communicate()[0] \
                     .replace("\u0000", "")
 
@@ -265,21 +265,16 @@ def restore_session():
 
             coords = ",".join(map(str, entry[1]))
             print("Launching {} ...".format(entry[3]))
-            subprocess.Popen(shlex.split(entry[3]))
+            Popen(shlex.split(entry[3]))
             time.sleep(1)
 
             print("Moving to 0,{}".format(coords))
-            # Decode base64 string representing the window name.
-            decoded_win = base64.urlsafe_b64decode(
-                entry[4]).decode("utf-8", "ignore")
-            subprocess.Popen(shlex.split(
-                "wmctrl -r \"{0}\" -e 0,{1}".format(decoded_win, coords)))
+            Popen(shlex.split(
+                "wmctrl -r \"{0}\" -e 0,{1}".format(winname, coords)))
             time.sleep(1)
 
             print("Moving to workspace {}".format(desktop))
-            subprocess.Popen(
-                shlex.split(
-                    "wmctrl -r :ACTIVE: -t {}".format(desktop)))
+            Popen(shlex.split("wmctrl -r :ACTIVE: -t {}".format(desktop)))
             print()
 
 
@@ -295,8 +290,8 @@ def move_windows():
     for window in windows:
         m = re.search(re_str, window)
         if m and m.group(1) != "-1":
-            encoded = base64.urlsafe_b64encode(bytes(m.group(2), "utf-8")) \
-                .decode('ascii')
+            encoded = base64.urlsafe_b64encode(
+                bytes(m.group(2), "utf-8")).decode('ascii')
             unmoved_windows.append(json.dumps(encoded))
 
     d = {}
