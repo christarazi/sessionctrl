@@ -264,6 +264,9 @@ def restore_session():
                 continue
 
             coords = ",".join(map(str, entry[1]))
+            winname = base64.urlsafe_b64decode(
+                entry[4]).decode("utf-8", "ignore")
+
             print("Launching {} ...".format(entry[3]))
             Popen(shlex.split(entry[3]))
             time.sleep(1)
@@ -300,22 +303,30 @@ def move_windows():
 
     for desktop in d:
         for window in d[desktop]:
-            if window[4] in unmoved_windows:
-                coords = ",".join(map(str, window[1]))
-                decoded_win = base64.urlsafe_b64decode(
-                    window[4]).decode("utf-8", "ignore")
-                print(decoded_win)
-                print("Moving to 0,{}".format(coords))
-                subprocess.Popen(shlex.split(
-                    "wmctrl -r \"{0}\" -e 0,{1}".format(decoded_win, coords)))
-                time.sleep(1)
-                print("Moving to workspace {}".format(desktop))
-                subprocess.Popen(shlex.split(
-                    "wmctrl -r \"{0}\" -t {1}".format(decoded_win, desktop)))
-                print("Modifying properties to {}".format(window[2]))
-                subprocess.Popen(shlex.split(
-                    "wmctrl -r \"{0}\" -b {1}".format(decoded_win, window[2])))
-                print()
+            if window[4] not in unmoved_windows:
+                continue
+            coords = ",".join(map(str, window[1]))
+            winname = base64.urlsafe_b64decode(
+                window[4]).decode("utf-8", "ignore")
+
+            # Remove vert & horz attribute to allow window to be moved
+            Popen(shlex.split(
+                "wmctrl -r \"{0}\" -b remove,maximized_vert,maximized_horz"
+                .format(winname)))
+
+            print(winname)
+            print("Moving to 0,{}".format(coords))
+            Popen(shlex.split(
+                "wmctrl -r \"{0}\" -e 0,{1}".format(winname, coords)))
+            time.sleep(1)
+
+            print("Moving to workspace {}".format(desktop))
+            Popen(shlex.split(
+                "wmctrl -r \"{0}\" -t {1}".format(winname, desktop)))
+
+            print("Modifying properties to {}\n".format(window[2]))
+            Popen(shlex.split(
+                "wmctrl -r \"{0}\" -b {1}".format(winname, window[2])))
 
 
 if args.r:
