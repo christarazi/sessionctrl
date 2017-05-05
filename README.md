@@ -57,3 +57,10 @@ name. What the script will do with `replace_apps` is if any application's
 `cmdline` (found under `/proc/$PID/cmdline`) partially matches what's inside
 `replace_apps`, then *that* (in this case 'android-studio') command string will
 be used instead when restoring session.
+
+
+## License
+
+This program is free software, distributed under the terms of the [GNU] General
+Public License as published by the Free Software Foundation, version 3 of the
+License (or any later version).  For more information, see the file LICENSE.
