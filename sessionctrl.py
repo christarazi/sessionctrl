@@ -160,90 +160,91 @@ def save_session():
         blacklisted = False
 
         m = re.search(re_str, window)
-        if m:
-            _wid = m.group(1)
-            desktop = m.group(2)
-            pid = int(m.group(3))
-            geo = (int(m.group(4)), int(m.group(5)),
-                   int(m.group(6)), int(m.group(7)))
+        if not m:
+            continue
 
-            # If pid is 0 then the application does not support windows.
-            if pid == 0:
-                continue
+        _wid = m.group(1)
+        desktop = m.group(2)
+        pid = int(m.group(3))
+        geo = (int(m.group(4)), int(m.group(5)),
+               int(m.group(6)), int(m.group(7)))
 
-            # Skip over desktop-specific windows.
-            if desktop == "-1":
-                continue
+        # If pid is 0 then the application does not support windows.
+        if pid == 0:
+            continue
 
-            # Get command of the application.
-            exec_path = _get_exec_path(pid)
+        # Skip over desktop-specific windows.
+        if desktop == "-1":
+            continue
 
-            for item in blacklist:
-                if item in exec_path:
-                    blacklisted = True
-                    break
+        # Get command of the application.
+        exec_path = _get_exec_path(pid)
 
-            # Encode window name into base64 and store the ASCII of the
-            # base64 string into JSON because it expects strings,
-            # not binary data.
-            window_name = json.dumps(
-                base64.urlsafe_b64encode(bytes(m.group(8), "utf-8"))
-                .decode('ascii'))
+        for item in blacklist:
+            if item in exec_path:
+                blacklisted = True
+                break
 
-            # Substitute applications from predetermined list.
-            # Some applications such as 'Android Studio' do not show up as themselves,
-            # rather under some strange name like 'sun-awt-X11-XFramePeer'.
-            for apps in replace_apps:
-                if apps in exec_path:
-                    exec_path = Popen(
-                        shlex.split("which {}".format(apps)),
-                        stdout=PIPE, universal_newlines=True) \
-                        .communicate()[0] \
-                        .replace("\u0000", "") \
-                        .strip()
+        # Encode window name into base64 and store the ASCII of the
+        # base64 string into JSON because it expects strings,
+        # not binary data.
+        window_name = json.dumps(
+            base64.urlsafe_b64encode(bytes(m.group(8), "utf-8"))
+            .decode('ascii'))
 
-            if not blacklisted:
-
-                # Get _NET_WM_STATE properties of the window, using xprop.
-                xprop = Popen(
-                    shlex.split("xprop -id {}".format(_wid)),
+        # Substitute applications from predetermined list.
+        # Some applications such as 'Android Studio' do not show up as themselves,
+        # rather under some strange name like 'sun-awt-X11-XFramePeer'.
+        for apps in replace_apps:
+            if apps in exec_path:
+                exec_path = Popen(
+                    shlex.split("which {}".format(apps)),
                     stdout=PIPE, universal_newlines=True) \
                     .communicate()[0] \
-                    .replace("\u0000", "")
+                    .replace("\u0000", "") \
+                    .strip()
 
-                # Populate list of states and convert them to something wmctrl
-                # understands.
-                net_wm_states = []
-                for prop in xprop.split('\n'):
-                    if prop.startswith("_NET_WM_STATE(ATOM) = "):
-                        r = re.search(
-                            "_NET_WM_STATE\(ATOM\) = ([\w, ]*$)", prop)
-                        if r:
-                            net_wm_states = r.group(1).split(',')
-                            net_wm_states = [
-                                wm_states[
-                                    x.strip()] for x in net_wm_states if x.strip() in wm_states]
-                            if len(net_wm_states) == 0:
-                                net_wm_states = "remove,maximized_vert,maximized_horz"
-                            elif len(net_wm_states) == 1:
-                                if "maximized_horz" in net_wm_states:
-                                    net_wm_states = "remove,maximized_vert"
-                                elif "maximized_vert" in net_wm_states:
-                                    net_wm_states = "remove,maximized_horz"
-                                elif "hidden" in net_wm_states:
-                                    net_wm_states = "add,hidden"
-                            else:
-                                net_wm_states = "add," + \
-                                    ','.join(net_wm_states)
-                            # print("DEBUG:", net_wm_states)
+        if not blacklisted:
+            # Get _NET_WM_STATE properties of the window, using xprop.
+            xprop = Popen(
+                shlex.split("xprop -id {}".format(_wid)),
+                stdout=PIPE, universal_newlines=True) \
+                .communicate()[0] \
+                .replace("\u0000", "")
 
-                # Finally insert an entry into the dictionary containing
-                # all window information for an application.
-                if desktop in d:
-                    d[desktop].append(
-                        [pid, geo, net_wm_states, exec_path, window_name])
-                else:
-                    d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
+            # Populate list of states and convert them to something wmctrl
+            # understands.
+            net_wm_states = []
+            for prop in xprop.split('\n'):
+                if prop.startswith("_NET_WM_STATE(ATOM) = "):
+                    r = re.search(
+                        "_NET_WM_STATE\(ATOM\) = ([\w, ]*$)", prop)
+                    if r:
+                        net_wm_states = r.group(1).split(',')
+                        net_wm_states = [
+                            wm_states[
+                                x.strip()] for x in net_wm_states if x.strip() in wm_states]
+                        if len(net_wm_states) == 0:
+                            net_wm_states = "remove,maximized_vert,maximized_horz"
+                        elif len(net_wm_states) == 1:
+                            if "maximized_horz" in net_wm_states:
+                                net_wm_states = "remove,maximized_vert"
+                            elif "maximized_vert" in net_wm_states:
+                                net_wm_states = "remove,maximized_horz"
+                            elif "hidden" in net_wm_states:
+                                net_wm_states = "add,hidden"
+                        else:
+                            net_wm_states = "add," + \
+                                ','.join(net_wm_states)
+                        # print("DEBUG:", net_wm_states)
+
+            # Finally insert an entry into the dictionary containing
+            # all window information for an application.
+            if desktop in d:
+                d[desktop].append(
+                    [pid, geo, net_wm_states, exec_path, window_name])
+            else:
+                d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
 
     # Write dictionary out to our session file.
     with open(session_file_path, "w") as f:
