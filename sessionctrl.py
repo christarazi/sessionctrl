@@ -1,4 +1,5 @@
-#!/usr/sbin/python3
+#!/usr/sbin/env python3
+
 
 # Copyright (C) 2017 Chris Tarazi
 #
