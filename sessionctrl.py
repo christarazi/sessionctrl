@@ -46,7 +46,7 @@ import argparse
 import base64
 import configparser
 from pprint import pprint
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, TimeoutExpired
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d',
@@ -107,7 +107,7 @@ wm_states = {
 with Popen(shlex.split("which wmctrl"), stdout=PIPE) as proc:
     try:
         proc.wait(timeout=5)
-    except TimeoutExpired as e:
+    except TimeoutExpired:
         print("Timeout expired checking for wmctrl")
         sys.exit(-1)
 
@@ -118,7 +118,7 @@ with Popen(shlex.split("which wmctrl"), stdout=PIPE) as proc:
 with Popen(shlex.split("which xprop"), stdout=PIPE) as proc:
     try:
         proc.wait(timeout=5)
-    except TimeoutExpired as e:
+    except TimeoutExpired:
         print("Timeout expired checking for xprop")
         sys.exit(-1)
 
@@ -170,16 +170,13 @@ def save_session():
                int(m.group(6)), int(m.group(7)))
 
         # If pid is 0 then the application does not support windows.
-        if pid == 0:
+        # And skip over desktop-specific windows.
+        if pid == 0 or desktop == "-1":
             continue
 
-        # Skip over desktop-specific windows.
-        if desktop == "-1":
-            continue
-
-        # Get command of the application.
+        # Get command of the application and check if it is blacklisted before
+        # continuing.
         exec_path = _get_exec_path(pid)
-
         for item in blacklist:
             if item in exec_path:
                 blacklisted = True
@@ -204,47 +201,48 @@ def save_session():
                     .replace("\u0000", "") \
                     .strip()
 
-        if not blacklisted:
-            # Get _NET_WM_STATE properties of the window, using xprop.
-            xprop = Popen(
-                shlex.split("xprop -id {}".format(_wid)),
-                stdout=PIPE, universal_newlines=True) \
-                .communicate()[0] \
-                .replace("\u0000", "")
+        if blacklisted:
+            continue
 
-            # Populate list of states and convert them to something wmctrl
-            # understands.
-            net_wm_states = []
-            for prop in xprop.split('\n'):
-                if prop.startswith("_NET_WM_STATE(ATOM) = "):
-                    r = re.search(
-                        "_NET_WM_STATE\(ATOM\) = ([\w, ]*$)", prop)
-                    if r:
-                        net_wm_states = r.group(1).split(',')
-                        net_wm_states = [
-                            wm_states[
-                                x.strip()] for x in net_wm_states if x.strip() in wm_states]
-                        if len(net_wm_states) == 0:
-                            net_wm_states = "remove,maximized_vert,maximized_horz"
-                        elif len(net_wm_states) == 1:
-                            if "maximized_horz" in net_wm_states:
-                                net_wm_states = "remove,maximized_vert"
-                            elif "maximized_vert" in net_wm_states:
-                                net_wm_states = "remove,maximized_horz"
-                            elif "hidden" in net_wm_states:
-                                net_wm_states = "add,hidden"
-                        else:
-                            net_wm_states = "add," + \
-                                ','.join(net_wm_states)
-                        # print("DEBUG:", net_wm_states)
+        # Get _NET_WM_STATE properties of the window, using xprop.
+        xprop = Popen(
+            shlex.split("xprop -id {}".format(_wid)),
+            stdout=PIPE, universal_newlines=True) \
+            .communicate()[0] \
+            .replace("\u0000", "")
 
-            # Finally insert an entry into the dictionary containing
-            # all window information for an application.
-            if desktop in d:
-                d[desktop].append(
-                    [pid, geo, net_wm_states, exec_path, window_name])
-            else:
-                d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
+        # Populate list of states and convert them to something wmctrl
+        # understands.
+        net_wm_states = []
+        for prop in xprop.split('\n'):
+            if prop.startswith("_NET_WM_STATE(ATOM) = "):
+                r = re.search(r"_NET_WM_STATE(ATOM) = ([\w, ]*$)", prop)
+                if r:
+                    net_wm_states = r.group(1).split(',')
+                    net_wm_states = [
+                        wm_states[
+                            x.strip()] for x in net_wm_states if x.strip() in wm_states]
+                    if not net_wm_states:
+                        net_wm_states = "remove,maximized_vert,maximized_horz"
+                    elif len(net_wm_states) == 1:
+                        if "maximized_horz" in net_wm_states:
+                            net_wm_states = "remove,maximized_vert"
+                        elif "maximized_vert" in net_wm_states:
+                            net_wm_states = "remove,maximized_horz"
+                        elif "hidden" in net_wm_states:
+                            net_wm_states = "add,hidden"
+                    else:
+                        net_wm_states = "add," + \
+                            ','.join(net_wm_states)
+                    # print("DEBUG:", net_wm_states)
+
+        # Finally insert an entry into the dictionary containing
+        # all window information for an application.
+        if desktop in d:
+            d[desktop].append(
+                [pid, geo, net_wm_states, exec_path, window_name])
+        else:
+            d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
 
     # Write dictionary out to our session file.
     if not args.dry_run:
@@ -290,24 +288,28 @@ def restore_session():
                 entry[4]).decode("utf-8", "ignore")
 
             print("Launching {} ...".format(entry[3]))
-            Popen(shlex.split(entry[3]))
+            if not args.dry_run:
+                Popen(shlex.split(entry[3]))
             time.sleep(1)
 
             print("Moving to 0,{}".format(coords))
-            Popen(shlex.split(
-                "wmctrl -r \"{0}\" -e 0,{1}".format(winname, coords)))
+            if not args.dry_run:
+                Popen(shlex.split(
+                    "wmctrl -r \"{0}\" -e 0,{1}".format(winname, coords)))
             time.sleep(1)
 
             print("Moving to workspace {}".format(desktop))
-            Popen(shlex.split("wmctrl -r :ACTIVE: -t {}".format(desktop)))
+            if not args.dry_run:
+                Popen(shlex.split("wmctrl -r :ACTIVE: -t {}".format(desktop)))
             print()
 
 
 def move_windows():
     cmd = "wmctrl -lG"
     re_str = (
-        "^[x0-9a-f]+\s+(-?[0-9]+)\s+[0-9]+\s+[0-9]+"
-        "\s+[0-9]+\s+[0-9]+\s+[^\s]+[\s]+(.+$)")
+        r"^[x0-9a-f]+\s+(-?[0-9]+)\s+[0-9]+\s+[0-9]+"
+        r"\s+[0-9]+\s+[0-9]+\s+[^\s]+[\s]+(.+$)"
+    )
 
     # Get list of open windows.
     unmoved_windows = []
