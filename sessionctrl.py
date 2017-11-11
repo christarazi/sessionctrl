@@ -220,8 +220,8 @@ def save_session():
                 if r:
                     net_wm_states = r.group(1).split(',')
                     net_wm_states = [
-                        wm_states[
-                            x.strip()] for x in net_wm_states if x.strip() in wm_states]
+                        wm_states[x.strip()] for x in net_wm_states
+                        if x.strip() in wm_states]
                     if not net_wm_states:
                         net_wm_states = "remove,maximized_vert,maximized_horz"
                     elif len(net_wm_states) == 1:
