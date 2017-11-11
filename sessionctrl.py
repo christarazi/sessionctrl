@@ -53,6 +53,9 @@ parser.add_argument('-d',
                     '--dry-run',
                     action="store_true",
                     help="don't actually save/restore/move")
+parser.add_argument('--verbose',
+                    action="store_true",
+                    help="print extra details")
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-r', action="store_true", help="restores session")
 group.add_argument('-s', action="store_true", help="saves session")
@@ -69,25 +72,43 @@ config = configparser.ConfigParser()
 blacklist = []
 replace_apps = []
 
-conf_file_path = "{}/.sessionctrl.conf".format(os.path.expanduser("~"))
-session_file_path = "{}/.sessionctrl.info".format(os.path.expanduser("~"))
+if os.environ.get("XDG_CONFIG_HOME", None):
+    CONF_FILE_PATH = "{}/sessionctrl/sessionctrl.conf".format(
+        os.environ.get("XDG_CONFIG_HOME"))
+else:
+    CONF_FILE_PATH = "{}/.config/sessionctrl/sessionctrl.conf".format(
+        os.environ.get("HOME"))
+
+if os.environ.get("XDG_DATA_HOME", None):
+    SESSION_FILE_PATH = "{}/sessionctrl/sessionctrl.info".format(
+        os.environ.get("XDG_DATA_HOME"))
+else:
+    SESSION_FILE_PATH = "{}/.local/share/sessionctrl/sessionctrl.info".format(
+        os.environ.get("HOME"))
+
+os.makedirs(os.path.dirname(CONF_FILE_PATH), exist_ok=True)
+os.makedirs(os.path.dirname(SESSION_FILE_PATH), exist_ok=True)
 
 # Create config file if it does not exist.
 # Otherwise parse the config file for the blacklist and replace_apps.
-if not os.path.isfile(conf_file_path):
+if not os.path.isfile(CONF_FILE_PATH):
     config.add_section("Options")
     config.set("Options", "blacklist", "")
     config.set("Options", "replace_apps", "")
-    with open(conf_file_path, 'w') as f:
+    with open(CONF_FILE_PATH, 'w') as f:
         config.write(f)
 else:
-    with open(conf_file_path, 'r') as f:
+    with open(CONF_FILE_PATH, 'r') as f:
         config.read_file(f)
     blacklist = config.get("Options", "blacklist").split()
     replace_apps = config.get("Options", "replace_apps").split()
 
-# print(blacklist)
-# print(replace_apps)
+if args.verbose:
+    print("Config file:  {}".format(CONF_FILE_PATH))
+    print("Session file: {}".format(SESSION_FILE_PATH))
+    print("blacklist:    {}".format(blacklist))
+    print("replace_apps: {}".format(replace_apps))
+    print()
 
 wm_states = {
     # "_NET_WM_STATE_MODAL": "modal",
@@ -246,7 +267,7 @@ def save_session():
 
     # Write dictionary out to our session file.
     if not args.dry_run:
-        with open(session_file_path, "w") as f:
+        with open(SESSION_FILE_PATH, "w") as f:
             json.dump(d, f)
         print("Session saved.")
     else:
@@ -269,7 +290,7 @@ def restore_session():
             open_windows[ep] = open_windows.get(ep, 0) + 1
 
     d = {}
-    with open(session_file_path, "r") as f:
+    with open(SESSION_FILE_PATH, "r") as f:
         d = json.load(f)
 
     if args.dry_run:
@@ -322,7 +343,7 @@ def move_windows():
             unmoved_windows.append(json.dumps(encoded))
 
     d = {}
-    with open(session_file_path, "r") as f:
+    with open(SESSION_FILE_PATH, "r") as f:
         d = json.load(f)
 
     if args.dry_run:
