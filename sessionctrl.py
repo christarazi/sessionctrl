@@ -44,6 +44,7 @@ import json
 import time
 import argparse
 import base64
+import configparser
 from pprint import pprint
 from subprocess import Popen, PIPE
 
@@ -61,6 +62,7 @@ args = parser.parse_args()
 global blacklist
 global replace_apps
 
+config = configparser.ConfigParser()
 blacklist = []
 replace_apps = []
 
@@ -70,22 +72,16 @@ session_file_path = "{}/.sessionctrl.info".format(os.path.expanduser("~"))
 # Create config file if it does not exist.
 # Otherwise parse the config file for the blacklist and replace_apps.
 if not os.path.isfile(conf_file_path):
+    config.add_section("Options")
+    config.set("Options", "blacklist", "")
+    config.set("Options", "replace_apps", "")
     with open(conf_file_path, 'w') as f:
-        f.write("blacklist=\n")
-        f.write("replace_apps=\n")
+        config.write(f)
 else:
     with open(conf_file_path, 'r') as f:
-        for line in f.readlines():
-            if line.startswith("blacklist="):
-                blacklist = [
-                    x.strip() for x in line[
-                        line.index('=') +
-                        1:].split(' ')]
-            elif line.startswith("replace_apps="):
-                replace_apps = [
-                    x.strip() for x in line[
-                        line.index('=') +
-                        1:].split(' ')]
+        config.read_file(f)
+    blacklist = config.get("Options", "blacklist").split()
+    replace_apps = config.get("Options", "replace_apps").split()
 
 # print(blacklist)
 # print(replace_apps)
