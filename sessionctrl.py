@@ -36,15 +36,15 @@ actually be minimized when restoring a session.
 See here: <https://bugs.launchpad.net/ubuntu/+source/wmctrl/+bug/260875>
 '''
 
-import os
-import re
-import sys
-import shlex
-import json
-import time
 import argparse
 import base64
 import configparser
+import json
+import os
+import re
+import shlex
+import sys
+import time
 from pprint import pprint
 from subprocess import Popen, PIPE, TimeoutExpired
 
