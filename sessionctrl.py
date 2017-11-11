@@ -49,13 +49,16 @@ from pprint import pprint
 from subprocess import Popen, PIPE
 
 parser = argparse.ArgumentParser()
+parser.add_argument('-d',
+                    '--dry-run',
+                    action="store_true",
+                    help="don't actually save/restore/move")
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-r', action="store_true", help="restores session")
 group.add_argument('-s', action="store_true", help="saves session")
-group.add_argument(
-    '-m',
-    action="store_true",
-    help="only moves already open windows")
+group.add_argument('-m',
+                   action="store_true",
+                   help="only moves already open windows")
 
 args = parser.parse_args()
 
@@ -244,9 +247,12 @@ def save_session():
                 d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
 
     # Write dictionary out to our session file.
-    with open(session_file_path, "w") as f:
-        json.dump(d, f)
+    if not args.dry_run:
+        with open(session_file_path, "w") as f:
+            json.dump(d, f)
         print("Session saved.")
+    else:
+        print("Dry run save.")
 
 
 def restore_session():
@@ -267,6 +273,9 @@ def restore_session():
     d = {}
     with open(session_file_path, "r") as f:
         d = json.load(f)
+
+    if args.dry_run:
+        print("Dry run restore.")
 
     for desktop in d:
         for entry in d[desktop]:
@@ -314,6 +323,9 @@ def move_windows():
     with open(session_file_path, "r") as f:
         d = json.load(f)
 
+    if args.dry_run:
+        print("Dry run move.")
+
     for desktop in d:
         for window in d[desktop]:
             if window[4] not in unmoved_windows:
@@ -323,23 +335,27 @@ def move_windows():
                 window[4]).decode("utf-8", "ignore")
 
             # Remove vert & horz attribute to allow window to be moved
-            Popen(shlex.split(
-                "wmctrl -r \"{0}\" -b remove,maximized_vert,maximized_horz"
-                .format(winname)))
+            if not args.dry_run:
+                Popen(shlex.split(
+                    "wmctrl -r \"{0}\" -b remove,maximized_vert,maximized_horz"
+                    .format(winname)))
 
             print(winname)
             print("Moving to 0,{}".format(coords))
-            Popen(shlex.split(
-                "wmctrl -r \"{0}\" -e 0,{1}".format(winname, coords)))
+            if not args.dry_run:
+                Popen(shlex.split(
+                    "wmctrl -r \"{0}\" -e 0,{1}".format(winname, coords)))
             time.sleep(1)
 
             print("Moving to workspace {}".format(desktop))
-            Popen(shlex.split(
-                "wmctrl -r \"{0}\" -t {1}".format(winname, desktop)))
+            if not args.dry_run:
+                Popen(shlex.split(
+                    "wmctrl -r \"{0}\" -t {1}".format(winname, desktop)))
 
             print("Modifying properties to {}\n".format(window[2]))
-            Popen(shlex.split(
-                "wmctrl -r \"{0}\" -b {1}".format(winname, window[2])))
+            if not args.dry_run:
+                Popen(shlex.split(
+                    "wmctrl -r \"{0}\" -b {1}".format(winname, window[2])))
 
 
 if args.r:
