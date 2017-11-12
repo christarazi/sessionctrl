@@ -29,11 +29,27 @@ $ ./sessionctrl.py -m  # Moves currently opened windows. Does not open new windo
 
 ### Additional information
 
-The session is saved in `$HOME/.sessionctrl.info`.
+This script complies with the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
+for the following:
 
-There is a config file `$HOME/.sessionctrl.conf` which is created on the first
-run. Entries into the config file are separated by a space. The two options
-are:
+ - `$XDG_CONFIG_HOME`
+ - `$XDG_DATA_HOME`
+
+The session is saved in the default `$XDG_DATA_HOME`, and if not defined or
+set, then:
+
+```
+$HOME/.local/share/sessionctrl
+```
+
+The config file is stored in the default `$XDG_CONFIG_HOME`, and if not defined
+or set, then:
+
+```
+$HOME/.config/sessionctrl
+```
+
+Entries into the config file are separated by a space. The two options are:
 
  - `blacklist`    - do not save any applications under this list
  - `replace_apps` - substitute application cmdline for another
