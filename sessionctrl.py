@@ -65,12 +65,9 @@ group.add_argument('-m',
 
 args = parser.parse_args()
 
-global blacklist
-global replace_apps
-
 config = configparser.ConfigParser()
-blacklist = []
-replace_apps = []
+BLACKLIST = []
+REPLACE_APPS = []
 
 if os.environ.get("XDG_CONFIG_HOME", None):
     CONF_FILE_PATH = "{}/sessionctrl/sessionctrl.conf".format(
@@ -90,7 +87,7 @@ os.makedirs(os.path.dirname(CONF_FILE_PATH), exist_ok=True)
 os.makedirs(os.path.dirname(SESSION_FILE_PATH), exist_ok=True)
 
 # Create config file if it does not exist.
-# Otherwise parse the config file for the blacklist and replace_apps.
+# Otherwise parse the config file for the BLACKLIST and REPLACE_APPS.
 if not os.path.isfile(CONF_FILE_PATH):
     config.add_section("Options")
     config.set("Options", "blacklist", "")
@@ -100,17 +97,17 @@ if not os.path.isfile(CONF_FILE_PATH):
 else:
     with open(CONF_FILE_PATH, 'r') as f:
         config.read_file(f)
-    blacklist = config.get("Options", "blacklist").split()
-    replace_apps = config.get("Options", "replace_apps").split()
+    BLACKLIST = config.get("Options", "blacklist").split()
+    REPLACE_APPS = config.get("Options", "replace_apps").split()
 
 if args.verbose:
     print("Config file:  {}".format(CONF_FILE_PATH))
     print("Session file: {}".format(SESSION_FILE_PATH))
-    print("blacklist:    {}".format(blacklist))
-    print("replace_apps: {}".format(replace_apps))
+    print("blacklist:    {}".format(BLACKLIST))
+    print("replace_apps: {}".format(REPLACE_APPS))
     print()
 
-wm_states = {
+WM_STATES = {
     # "_NET_WM_STATE_MODAL": "modal",
     # "_NET_WM_STATE_STICKY": "sticky",
     "_NET_WM_STATE_MAXIMIZED_VERT": "maximized_vert",
@@ -198,7 +195,7 @@ def save_session():
         # Get command of the application and check if it is blacklisted before
         # continuing.
         exec_path = _get_exec_path(pid)
-        for item in blacklist:
+        for item in BLACKLIST:
             if item in exec_path:
                 blacklisted = True
                 break
@@ -213,7 +210,7 @@ def save_session():
         # Substitute applications from predetermined list.
         # Some applications such as 'Android Studio' do not show up as themselves,
         # rather under some strange name like 'sun-awt-X11-XFramePeer'.
-        for apps in replace_apps:
+        for apps in REPLACE_APPS:
             if apps in exec_path:
                 exec_path = Popen(
                     shlex.split("which {}".format(apps)),
@@ -234,36 +231,36 @@ def save_session():
 
         # Populate list of states and convert them to something wmctrl
         # understands.
-        net_wm_states = []
+        net_wm_sts = []
         for prop in xprop.split('\n'):
             if prop.startswith("_NET_WM_STATE(ATOM) = "):
                 r = re.search(r"_NET_WM_STATE(ATOM) = ([\w, ]*$)", prop)
                 if r:
-                    net_wm_states = r.group(1).split(',')
-                    net_wm_states = [
-                        wm_states[x.strip()] for x in net_wm_states
-                        if x.strip() in wm_states]
-                    if not net_wm_states:
-                        net_wm_states = "remove,maximized_vert,maximized_horz"
-                    elif len(net_wm_states) == 1:
-                        if "maximized_horz" in net_wm_states:
-                            net_wm_states = "remove,maximized_vert"
-                        elif "maximized_vert" in net_wm_states:
-                            net_wm_states = "remove,maximized_horz"
-                        elif "hidden" in net_wm_states:
-                            net_wm_states = "add,hidden"
+                    net_wm_sts = r.group(1).split(',')
+                    net_wm_sts = [
+                        WM_STATES[x.strip()] for x in net_wm_sts
+                        if x.strip() in WM_STATES]
+                    if not net_wm_sts:
+                        net_wm_sts = "remove,maximized_vert,maximized_horz"
+                    elif len(net_wm_sts) == 1:
+                        if "maximized_horz" in net_wm_sts:
+                            net_wm_sts = "remove,maximized_vert"
+                        elif "maximized_vert" in net_wm_sts:
+                            net_wm_sts = "remove,maximized_horz"
+                        elif "hidden" in net_wm_sts:
+                            net_wm_sts = "add,hidden"
                     else:
-                        net_wm_states = "add," + \
-                            ','.join(net_wm_states)
-                    # print("DEBUG:", net_wm_states)
+                        net_wm_sts = "add," + \
+                            ','.join(net_wm_sts)
+                    # print("DEBUG:", net_wm_sts)
 
         # Finally insert an entry into the dictionary containing
         # all window information for an application.
         if desktop in d:
             d[desktop].append(
-                [pid, geo, net_wm_states, exec_path, window_name])
+                [pid, geo, net_wm_sts, exec_path, window_name])
         else:
-            d[desktop] = [[pid, geo, net_wm_states, exec_path, window_name]]
+            d[desktop] = [[pid, geo, net_wm_sts, exec_path, window_name]]
 
     # Write dictionary out to our session file.
     if not args.dry_run:
